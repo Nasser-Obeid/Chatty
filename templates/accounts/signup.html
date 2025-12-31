@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Account - Chatty{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-logo-icon">
+                <i class="fas fa-comments"></i>
+            </div>
+            <span class="auth-logo-text">Chatty</span>
+        </div>
+        
+        <h1 class="auth-title">Create your account</h1>
+        <p class="auth-subtitle">Join thousands of people connecting on Chatty</p>
+        
+        {% if form.errors %}
+        <div class="alert alert-error">
+            {% for field in form %}
+                {% for error in field.errors %}
+                    {{ error }}<br>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="post" id="signupForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label" for="name">Full Name</label>
+                {{ form.name }}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    {{ form.username }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="age">Age</label>
+                    {{ form.age }}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                {{ form.email }}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                {{ form.password }}
+                <span class="form-hint">At least 8 characters</span>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="password_confirm">Confirm Password</label>
+                {{ form.password_confirm }}
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-user-plus"></i>
+                Create Account
+            </button>
+        </form>
+        
+        <p class="text-center mt-3 text-muted text-small">
+            Already have an account? <a href="{% url 'accounts:login' %}" class="link">Sign in</a>
+        </p>
+        
+        <p class="text-center mt-2 text-muted text-small">
+            By signing up, you agree to our Terms of Service and Privacy Policy
+        </p>
+    </div>
+</div>
+{% endblock %}

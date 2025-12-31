@@ -1,0 +1,124 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Appearance - Chatty{% endblock %}
+
+{% block app_content %}
+<aside class="sidebar">
+    <div class="sidebar-logo"><i class="fas fa-comments"></i></div>
+    <nav class="sidebar-nav">
+        <a href="{% url 'chat:chat_list' %}" class="sidebar-item"><i class="fas fa-comment-dots"></i></a>
+    </nav>
+    <div class="sidebar-bottom">
+        <a href="{% url 'core:settings' %}" class="sidebar-item active"><i class="fas fa-cog"></i></a>
+    </div>
+</aside>
+
+<div class="settings-container">
+    <div class="settings-header">
+        <a href="{% url 'core:settings' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i></a>
+        <h1>Appearance</h1>
+    </div>
+    
+    <div class="settings-content">
+        <form method="post" id="appearanceForm">
+            {% csrf_token %}
+            
+            <!-- Theme Selection -->
+            <div class="settings-section">
+                <h3 class="settings-section-title">Theme</h3>
+                <div class="theme-options">
+                    <label class="theme-option {% if request.user.theme == 'dark' %}active{% endif %}">
+                        <input type="radio" name="theme" value="dark" {% if request.user.theme == 'dark' %}checked{% endif %}>
+                        <div class="theme-preview theme-dark">
+                            <div class="theme-preview-sidebar"></div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-msg"></div>
+                                <div class="theme-preview-msg sent"></div>
+                            </div>
+                        </div>
+                        <span>Dark</span>
+                    </label>
+                    
+                    <label class="theme-option {% if request.user.theme == 'light' %}active{% endif %}">
+                        <input type="radio" name="theme" value="light" {% if request.user.theme == 'light' %}checked{% endif %}>
+                        <div class="theme-preview theme-light">
+                            <div class="theme-preview-sidebar"></div>
+                            <div class="theme-preview-content">
+                                <div class="theme-preview-msg"></div>
+                                <div class="theme-preview-msg sent"></div>
+                            </div>
+                        </div>
+                        <span>Light</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Chat Background -->
+            <div class="settings-section">
+                <h3 class="settings-section-title">Chat Background</h3>
+                <div class="background-options">
+                    {% for bg in backgrounds %}
+                    <label class="bg-option {% if request.user.chat_background == bg.id %}active{% endif %}">
+                        <input type="radio" name="chat_background" value="{{ bg.id }}" {% if request.user.chat_background == bg.id %}checked{% endif %}>
+                        <div class="bg-preview {{ bg.class }}"></div>
+                        <span>{{ bg.name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.settings-header{display:flex;align-items:center;gap:16px;padding:24px 32px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color)}
+.settings-header h1{font-size:20px;font-weight:600}
+.settings-section{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px}
+.settings-section-title{font-size:16px;font-weight:600;margin-bottom:16px}
+
+.theme-options{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.theme-option{cursor:pointer;text-align:center}
+.theme-option input{display:none}
+.theme-preview{width:100%;aspect-ratio:16/10;border-radius:var(--radius-md);overflow:hidden;display:flex;border:2px solid transparent;transition:border-color 0.2s}
+.theme-option.active .theme-preview{border-color:var(--accent-primary)}
+.theme-preview-sidebar{width:20%;background:rgba(0,0,0,0.3)}
+.theme-preview-content{flex:1;padding:8px;display:flex;flex-direction:column;gap:4px;justify-content:center}
+.theme-preview-msg{height:12px;width:60%;border-radius:4px;background:rgba(255,255,255,0.2)}
+.theme-preview-msg.sent{margin-left:auto;background:var(--accent-primary)}
+.theme-dark{background:#0a0a0f}
+.theme-light{background:#f8f9fc}
+.theme-light .theme-preview-sidebar{background:rgba(0,0,0,0.1)}
+.theme-light .theme-preview-msg{background:rgba(0,0,0,0.1)}
+.theme-option span{display:block;margin-top:8px;font-size:14px}
+
+.background-options{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.bg-option{cursor:pointer;text-align:center}
+.bg-option input{display:none}
+.bg-preview{width:100%;aspect-ratio:1;border-radius:var(--radius-md);border:2px solid transparent;transition:border-color 0.2s}
+.bg-option.active .bg-preview{border-color:var(--accent-primary)}
+.bg-option span{display:block;margin-top:6px;font-size:12px}
+.bg-default{background:var(--bg-primary)}
+.bg-ocean{background:linear-gradient(180deg,#0f172a,#1e3a5f)}
+.bg-sunset{background:linear-gradient(180deg,#1a1a2e,#2d1b3d)}
+.bg-forest{background:linear-gradient(180deg,#0f1a14,#1a2e1a)}
+.bg-purple{background:linear-gradient(180deg,#1a1625,#2d1f3d)}
+.bg-minimal{background:var(--bg-tertiary)}
+</style>
+
+<script>
+document.querySelectorAll('.theme-option input, .bg-option input').forEach(input => {
+    input.addEventListener('change', () => {
+        document.querySelectorAll('.theme-option').forEach(opt => opt.classList.remove('active'));
+        document.querySelectorAll('.bg-option').forEach(opt => opt.classList.remove('active'));
+        input.closest('.theme-option, .bg-option').classList.add('active');
+        
+        // Apply theme immediately
+        if (input.name === 'theme') {
+            document.documentElement.dataset.theme = input.value;
+        }
+    });
+});
+</script>
+{% endblock %}

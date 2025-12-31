@@ -1,0 +1,124 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Privacy & Data - Chatty{% endblock %}
+
+{% block app_content %}
+<aside class="sidebar">
+    <div class="sidebar-logo"><i class="fas fa-comments"></i></div>
+    <nav class="sidebar-nav">
+        <a href="{% url 'chat:chat_list' %}" class="sidebar-item"><i class="fas fa-comment-dots"></i></a>
+    </nav>
+    <div class="sidebar-bottom">
+        <a href="{% url 'core:settings' %}" class="sidebar-item active"><i class="fas fa-cog"></i></a>
+    </div>
+</aside>
+
+<div class="settings-container">
+    <div class="settings-header">
+        <a href="{% url 'core:settings' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i></a>
+        <h1>Privacy & Data</h1>
+    </div>
+    
+    <div class="settings-content">
+        <!-- Data Backup -->
+        <div class="settings-section">
+            <h3 class="settings-section-title">Chat Backup</h3>
+            <p class="text-muted text-small mb-2">Download a copy of your chat history to your device.</p>
+            
+            <button class="btn btn-secondary" id="backupAllBtn">
+                <i class="fas fa-download"></i> Backup All Chats
+            </button>
+            
+            {% if backups %}
+            <div class="backup-list mt-3">
+                <h4 class="text-small text-muted mb-1">Recent Backups</h4>
+                {% for backup in backups %}
+                <div class="backup-item">
+                    <div class="backup-info">
+                        <i class="fas fa-file-archive"></i>
+                        <div>
+                            <div class="backup-name">Backup {{ backup.created_at|date:"M d, Y" }}</div>
+                            <div class="backup-date">{{ backup.created_at|date:"g:i A" }}</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'chat:download_backup' backup_id=backup.id %}" class="btn btn-ghost btn-sm">
+                        <i class="fas fa-download"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Encryption Info -->
+        <div class="settings-section">
+            <h3 class="settings-section-title">Message Encryption</h3>
+            <div class="encryption-info">
+                <div class="encryption-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div>
+                    <p>Your messages are encrypted using AES-256 encryption.</p>
+                    <p class="text-muted text-small mt-1">All messages are stored in encrypted form and decrypted only when displayed.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delete Account -->
+        <div class="settings-section danger-zone">
+            <h3 class="settings-section-title" style="color:var(--error);">Danger Zone</h3>
+            <p class="text-muted text-small mb-2">Once you delete your account, there is no going back.</p>
+            
+            <a href="{% url 'core:delete_account' %}" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Delete Account
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.settings-header{display:flex;align-items:center;gap:16px;padding:24px 32px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color)}
+.settings-header h1{font-size:20px;font-weight:600}
+.settings-section{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px}
+.settings-section-title{font-size:16px;font-weight:600;margin-bottom:16px}
+.backup-list{border-top:1px solid var(--border-color);padding-top:16px}
+.backup-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-light)}
+.backup-item:last-child{border-bottom:none}
+.backup-info{display:flex;align-items:center;gap:12px}
+.backup-info i{width:36px;height:36px;background:var(--bg-tertiary);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--accent-primary)}
+.backup-name{font-weight:500;font-size:14px}
+.backup-date{font-size:12px;color:var(--text-muted)}
+.encryption-info{display:flex;gap:16px;align-items:flex-start}
+.encryption-icon{width:48px;height:48px;background:rgba(16,185,129,0.1);color:var(--success);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:20px}
+.danger-zone{border-color:rgba(239,68,68,0.3)}
+</style>
+
+<script>
+document.getElementById('backupAllBtn').addEventListener('click', async () => {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Creating backup...';
+    
+    try {
+        const response = await fetch('{% url "chat:create_backup_all" %}', {
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        const data = await response.json();
+        
+        if (data.success && data.download_url) {
+            window.location.href = data.download_url;
+            btn.innerHTML = '<i class="fas fa-check"></i> Backup Complete';
+        } else {
+            btn.innerHTML = '<i class="fas fa-times"></i> Backup Failed';
+        }
+    } catch (error) {
+        btn.innerHTML = '<i class="fas fa-times"></i> Error';
+    }
+    
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-download"></i> Backup All Chats';
+    }, 3000);
+});
+</script>
+{% endblock %}

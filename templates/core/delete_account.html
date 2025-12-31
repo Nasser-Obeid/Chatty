@@ -1,0 +1,76 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Delete Account - Chatty{% endblock %}
+
+{% block app_content %}
+<aside class="sidebar">
+    <div class="sidebar-logo"><i class="fas fa-comments"></i></div>
+    <nav class="sidebar-nav">
+        <a href="{% url 'chat:chat_list' %}" class="sidebar-item"><i class="fas fa-comment-dots"></i></a>
+    </nav>
+    <div class="sidebar-bottom">
+        <a href="{% url 'core:settings' %}" class="sidebar-item active"><i class="fas fa-cog"></i></a>
+    </div>
+</aside>
+
+<div class="settings-container">
+    <div class="settings-header">
+        <a href="{% url 'core:privacy' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i></a>
+        <h1>Delete Account</h1>
+    </div>
+    
+    <div class="settings-content">
+        <div class="delete-warning">
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h2>Are you sure?</h2>
+            <p>This action cannot be undone. This will permanently delete your account and all associated data including:</p>
+            <ul>
+                <li>Your profile information</li>
+                <li>All your messages and chat history</li>
+                <li>Your uploaded files and media</li>
+                <li>Your group memberships</li>
+            </ul>
+        </div>
+        
+        <div class="settings-section">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label class="form-label">Reason for leaving (optional)</label>
+                    {{ form.reason }}
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" name="confirm" required>
+                        <span class="checkbox-label">I understand that this action is irreversible and all my data will be permanently deleted.</span>
+                    </label>
+                </div>
+                
+                <div class="delete-actions">
+                    <a href="{% url 'core:privacy' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete My Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.settings-header{display:flex;align-items:center;gap:16px;padding:24px 32px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color)}
+.settings-header h1{font-size:20px;font-weight:600}
+.settings-section{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px}
+.delete-warning{text-align:center;padding:40px;margin-bottom:24px}
+.warning-icon{width:80px;height:80px;background:rgba(239,68,68,0.1);color:var(--error);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px}
+.delete-warning h2{font-size:24px;margin-bottom:12px}
+.delete-warning p{color:var(--text-secondary);margin-bottom:16px}
+.delete-warning ul{text-align:left;max-width:300px;margin:0 auto;color:var(--text-muted);font-size:14px}
+.delete-warning li{padding:4px 0}
+.delete-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px}
+</style>
+{% endblock %}

@@ -1,0 +1,30 @@
+# Django core
+Django>=4.2,<5.0
+daphne>=4.0.0
+channels>=4.0.0
+channels-redis>=4.1.0
+
+# Database
+dj-database-url>=2.1.0
+psycopg2-binary>=2.9.9
+
+# REST API
+djangorestframework>=3.14.0
+
+# Security & Auth
+cryptography>=41.0.0
+
+# Storage & Static
+whitenoise>=6.6.0
+django-storages>=1.14.0
+Pillow>=10.0.0
+
+# CORS
+django-cors-headers>=4.3.0
+
+# Production server
+gunicorn>=21.0.0
+uvicorn[standard]>=0.24.0
+
+# Redis (for caching and channels)
+redis>=5.0.0

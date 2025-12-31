@@ -1,0 +1,253 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Messages - Chatty{% endblock %}
+
+{% block app_content %}
+<!-- Sidebar Navigation -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <i class="fas fa-comments"></i>
+    </div>
+    
+    <nav class="sidebar-nav">
+        <a href="{% url 'chat:chat_list' %}" class="sidebar-item active" title="Messages">
+            <i class="fas fa-comment-dots"></i>
+        </a>
+        <a href="#" class="sidebar-item" title="New Chat" id="newChatBtn">
+            <i class="fas fa-user-plus"></i>
+        </a>
+        <a href="#" class="sidebar-item" title="Create Group" id="newGroupBtn">
+            <i class="fas fa-users"></i>
+        </a>
+    </nav>
+    
+    <div class="sidebar-bottom">
+        <a href="{% url 'core:settings' %}" class="sidebar-item" title="Settings">
+            <i class="fas fa-cog"></i>
+        </a>
+        <div class="sidebar-user" title="{{ request.user.username }}">
+            {% if request.user.profile_pic %}
+            <img src="{{ request.user.profile_pic.url }}" alt="{{ request.user.username }}">
+            {% else %}
+            <div class="avatar avatar-placeholder" style="width: 100%; height: 100%;">
+                {{ request.user.username|make_list|first|upper }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</aside>
+
+<!-- Chat List Panel -->
+<div class="chat-list-panel">
+    <div class="chat-list-header">
+        <h1 class="chat-list-title">Messages</h1>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search conversations..." id="searchInput">
+        </div>
+    </div>
+    
+    <div class="chat-list-items" id="chatList">
+        {% for chat in chats %}
+        <a href="{% url 'chat:chat_room' conversation_id=chat.conversation.id %}" class="chat-item">
+            <div class="chat-item-avatar">
+                {% if chat.conversation.conversation_type == 'group' %}
+                <div class="avatar avatar-placeholder"><i class="fas fa-users"></i></div>
+                {% elif chat.conversation.conversation_type == 'ai' %}
+                <div class="avatar avatar-placeholder" style="background: linear-gradient(135deg, #10b981, #059669);"><i class="fas fa-robot"></i></div>
+                {% else %}
+                <div class="avatar avatar-placeholder">{{ chat.display_name|make_list|first|upper }}</div>
+                {% endif %}
+            </div>
+            <div class="chat-item-info">
+                <div class="chat-item-name">
+                    <span>{{ chat.display_name }}</span>
+                    {% if chat.last_message %}
+                    <span class="chat-item-time">{{ chat.last_message.created_at|timesince }}</span>
+                    {% endif %}
+                </div>
+                <div class="chat-item-preview">
+                    <span class="chat-item-preview-text">
+                        {% if chat.last_message %}{{ chat.last_message.content|truncatewords:6 }}{% else %}Start a conversation{% endif %}
+                    </span>
+                    {% if chat.unread_count > 0 %}
+                    <span class="chat-item-unread">{{ chat.unread_count }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="empty-state" style="padding: 40px 20px;">
+            <div class="empty-state-icon" style="width: 64px; height: 64px; font-size: 24px;">
+                <i class="fas fa-comment-slash"></i>
+            </div>
+            <div class="empty-state-title" style="font-size: 16px;">No conversations yet</div>
+            <p class="empty-state-text" style="font-size: 13px;">Start a new chat</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<main class="chat-main">
+    <div class="empty-state">
+        <div class="empty-state-icon"><i class="fas fa-comments"></i></div>
+        <h2 class="empty-state-title">Welcome to Chatty</h2>
+        <p class="empty-state-text">Select a conversation or start a new chat</p>
+        <button class="btn btn-primary mt-3" id="startChatBtn"><i class="fas fa-plus"></i> Start New Chat</button>
+    </div>
+</main>
+
+<!-- New Chat Modal -->
+<div id="newChatModal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Start New Chat</h2>
+            <button class="modal-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="search-box mb-2">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search users..." id="userSearchInput">
+            </div>
+            <div class="user-search-results" id="userSearchResults">
+                <p class="text-muted text-center" style="padding: 40px;">Search for users</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Group Modal -->
+<div id="newGroupModal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create Group</h2>
+            <button class="modal-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="createGroupForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label">Group Name</label>
+                    <input type="text" class="form-input" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" name="description" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Add Members</label>
+                    <div class="search-box mb-1">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search users..." id="groupUserSearch">
+                    </div>
+                    <div class="selected-members" id="selectedMembers"></div>
+                    <div class="user-search-results" id="groupSearchResults"></div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Create Group</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;display:flex;align-items:center;justify-content:center}
+.modal.hidden{display:none}
+.modal-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px)}
+.modal-content{position:relative;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-xl);width:100%;max-width:480px;max-height:80vh;overflow:hidden}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-size:18px;font-weight:600}
+.modal-close{width:32px;height:32px;background:var(--bg-tertiary);border:none;border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:24px;overflow-y:auto;max-height:calc(80vh - 80px)}
+.user-search-results{max-height:300px;overflow-y:auto}
+.user-result{display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--radius-md);cursor:pointer;transition:background 0.2s}
+.user-result:hover{background:var(--bg-tertiary)}
+.user-result-info{flex:1}
+.user-result-name{font-weight:500}
+.user-result-username{font-size:13px;color:var(--text-muted)}
+.selected-members{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.selected-member{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--accent-glow);color:var(--accent-primary);border-radius:var(--radius-lg);font-size:13px}
+.selected-member button{background:none;border:none;color:inherit;cursor:pointer}
+</style>
+
+<script>
+const newChatModal = document.getElementById('newChatModal');
+const newGroupModal = document.getElementById('newGroupModal');
+
+document.getElementById('newChatBtn').addEventListener('click', e => { e.preventDefault(); newChatModal.classList.remove('hidden'); });
+document.getElementById('startChatBtn').addEventListener('click', () => newChatModal.classList.remove('hidden'));
+document.getElementById('newGroupBtn').addEventListener('click', e => { e.preventDefault(); newGroupModal.classList.remove('hidden'); });
+
+document.querySelectorAll('.modal-overlay, .modal-close').forEach(el => {
+    el.addEventListener('click', () => { newChatModal.classList.add('hidden'); newGroupModal.classList.add('hidden'); });
+});
+
+let searchTimeout;
+const userSearchInput = document.getElementById('userSearchInput');
+const userSearchResults = document.getElementById('userSearchResults');
+
+userSearchInput.addEventListener('input', e => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.trim();
+    if (query.length < 2) { userSearchResults.innerHTML = '<p class="text-muted text-center" style="padding:40px">Search for users</p>'; return; }
+    searchTimeout = setTimeout(async () => {
+        const response = await fetch(`/accounts/search/?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        if (data.users.length === 0) { userSearchResults.innerHTML = '<p class="text-muted text-center" style="padding:40px">No users found</p>'; return; }
+        userSearchResults.innerHTML = data.users.map(user => `
+            <div class="user-result" onclick="location.href='/chat/start/${user.id}/'">
+                <div class="avatar avatar-placeholder">${user.name[0].toUpperCase()}</div>
+                <div class="user-result-info"><div class="user-result-name">${user.name}</div><div class="user-result-username">@${user.username}</div></div>
+            </div>
+        `).join('');
+    }, 300);
+});
+
+const selectedMembers = new Map();
+const groupUserSearch = document.getElementById('groupUserSearch');
+const groupSearchResults = document.getElementById('groupSearchResults');
+const selectedMembersContainer = document.getElementById('selectedMembers');
+
+groupUserSearch.addEventListener('input', e => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.trim();
+    if (query.length < 2) { groupSearchResults.innerHTML = ''; return; }
+    searchTimeout = setTimeout(async () => {
+        const response = await fetch(`/accounts/search/?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        groupSearchResults.innerHTML = data.users.filter(u => !selectedMembers.has(u.id)).map(user => `
+            <div class="user-result" onclick="addMember('${user.id}', '${user.name}')">
+                <div class="avatar avatar-placeholder">${user.name[0].toUpperCase()}</div>
+                <div class="user-result-info"><div class="user-result-name">${user.name}</div><div class="user-result-username">@${user.username}</div></div>
+            </div>
+        `).join('');
+    }, 300);
+});
+
+function addMember(id, name) { selectedMembers.set(id, name); updateSelectedMembers(); groupSearchResults.innerHTML = ''; groupUserSearch.value = ''; }
+function removeMember(id) { selectedMembers.delete(id); updateSelectedMembers(); }
+function updateSelectedMembers() {
+    selectedMembersContainer.innerHTML = Array.from(selectedMembers.entries()).map(([id, name]) => `<span class="selected-member">${name}<button type="button" onclick="removeMember('${id}')">&times;</button></span>`).join('');
+}
+
+document.getElementById('createGroupForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    selectedMembers.forEach((name, id) => formData.append('participants', id));
+    const response = await fetch('{% url "chat:create_group" %}', { method: 'POST', body: formData, headers: { 'X-CSRFToken': '{{ csrf_token }}' } });
+    const data = await response.json();
+    if (data.success) window.location.href = `/chat/${data.conversation_id}/`;
+    else alert(data.error || 'Failed');
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+    const query = e.target.value.toLowerCase();
+    document.querySelectorAll('.chat-item').forEach(item => {
+        const name = item.querySelector('.chat-item-name span').textContent.toLowerCase();
+        item.style.display = name.includes(query) ? 'flex' : 'none';
+    });
+});
+</script>
+{% endblock %}

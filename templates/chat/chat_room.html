@@ -1,0 +1,599 @@
+{% extends 'base_app.html' %}
+
+{% block title %}{% if other_user %}{{ other_user.get_display_name }}{% else %}{{ conversation.name|default:"Chat" }}{% endif %} - Chatty{% endblock %}
+
+{% block app_content %}
+<!-- Sidebar Navigation -->
+<aside class="sidebar">
+    <div class="sidebar-logo"><i class="fas fa-comments"></i></div>
+    <nav class="sidebar-nav">
+        <a href="{% url 'chat:chat_list' %}" class="sidebar-item" title="Messages"><i class="fas fa-comment-dots"></i></a>
+        <a href="#" class="sidebar-item" title="New Chat" onclick="event.preventDefault();"><i class="fas fa-user-plus"></i></a>
+        <a href="#" class="sidebar-item" title="Create Group" onclick="event.preventDefault();"><i class="fas fa-users"></i></a>
+    </nav>
+    <div class="sidebar-bottom">
+        <a href="{% url 'core:settings' %}" class="sidebar-item" title="Settings"><i class="fas fa-cog"></i></a>
+        <div class="sidebar-user">
+            <div class="avatar avatar-placeholder" style="width:100%;height:100%;">{{ request.user.username|make_list|first|upper }}</div>
+        </div>
+    </div>
+</aside>
+
+<!-- Chat List Sidebar -->
+<div class="chat-list-panel">
+    <div class="chat-list-header">
+        <h1 class="chat-list-title">Messages</h1>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search..." id="sidebarSearch">
+        </div>
+    </div>
+    <div class="chat-list-items" id="chatListItems">
+        {% for chat in sidebar_chats %}
+        <a href="{% url 'chat:chat_room' conversation_id=chat.conversation.id %}" 
+           class="chat-item {% if chat.is_active %}active{% endif %}"
+           data-conversation-id="{{ chat.conversation.id }}">
+            <div class="chat-item-avatar">
+                <div class="avatar avatar-placeholder">{{ chat.display_name|make_list|first|upper }}</div>
+            </div>
+            <div class="chat-item-info">
+                <div class="chat-item-name"><span>{{ chat.display_name }}</span></div>
+                <div class="chat-item-preview">
+                    <span class="chat-item-preview-text">{% if chat.last_message %}{{ chat.last_message.content|truncatewords:4 }}{% endif %}</span>
+                    {% if chat.unread_count > 0 %}<span class="chat-item-unread">{{ chat.unread_count }}</span>{% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Main Chat Area -->
+<main class="chat-main chat-bg-{{ request.user.chat_background }}">
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <div class="chat-item-avatar">
+            {% if conversation.conversation_type == 'group' %}
+            <div class="avatar avatar-placeholder"><i class="fas fa-users"></i></div>
+            {% elif conversation.conversation_type == 'ai' %}
+            <div class="avatar avatar-placeholder" style="background:linear-gradient(135deg,#10b981,#059669);"><i class="fas fa-robot"></i></div>
+            {% else %}
+            <div class="avatar avatar-placeholder">{{ other_user.username|make_list|first|upper|default:'?' }}</div>
+            {% endif %}
+        </div>
+        <div class="chat-header-info" id="openChatInfo" style="cursor:pointer;">
+            <div class="chat-header-name">{% if other_user %}{{ other_user.get_display_name }}{% else %}{{ conversation.name|default:"Chat" }}{% endif %}</div>
+            <div class="chat-header-status" id="userStatus">
+                {% if other_user and other_user.is_online %}
+                <span class="online-dot"></span> Online
+                {% elif conversation.conversation_type == 'group' %}
+                {{ conversation.participants.count }} members
+                {% elif conversation.conversation_type == 'ai' %}
+                AI Assistant
+                {% else %}
+                Click for info
+                {% endif %}
+            </div>
+        </div>
+        <div class="chat-header-actions">
+            <button class="btn btn-icon btn-ghost" title="Chat Info" id="chatInfoBtn"><i class="fas fa-info-circle"></i></button>
+            <button class="btn btn-icon btn-ghost" title="More" id="chatMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
+        </div>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="chat-messages" id="messagesContainer">
+        {% for message in chat_messages %}
+        <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}" data-id="{{ message.id }}">
+            {% if message.sender != request.user %}
+            <div class="message-avatar">
+                <div class="avatar avatar-sm avatar-placeholder">{{ message.sender.username|make_list|first|upper|default:'?' }}</div>
+            </div>
+            {% endif %}
+            <div class="message-content">
+                {% if message.message_type == 'system' %}
+                <div class="system-message">{{ message.content }}</div>
+                {% else %}
+                <div class="message-bubble">
+                    {% if message.file %}
+                    <a href="{{ message.file.url }}" class="message-file" download>
+                        <div class="message-file-icon"><i class="fas fa-file"></i></div>
+                        <div class="message-file-info">
+                            <div class="message-file-name">{{ message.file_name }}</div>
+                            <div class="message-file-size">{{ message.file_size|filesizeformat }}</div>
+                        </div>
+                        <i class="fas fa-download"></i>
+                    </a>
+                    {% endif %}
+                    {% if message.content %}{{ message.content }}{% endif %}
+                </div>
+                <div class="message-meta">
+                    <span>{{ message.created_at|date:"g:i A" }}</span>
+                    {% if message.is_edited %}<span>• edited</span>{% endif %}
+                    {% if message.sender == request.user %}<i class="fas fa-check-double" style="color:var(--accent-primary);margin-left:4px;"></i>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Typing Indicator -->
+    <div class="typing-indicator hidden" id="typingIndicator">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+        <span id="typingUser">Someone</span> is typing...
+    </div>
+
+    <!-- Chat Input -->
+    <div class="chat-input-area">
+        <form id="messageForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="chat-input-wrapper">
+                <div class="chat-input-actions">
+                    <label class="chat-input-btn" title="Attach file">
+                        <i class="fas fa-paperclip"></i>
+                        <input type="file" name="file" id="fileInput" style="display:none;">
+                    </label>
+                </div>
+                <textarea class="chat-input" id="messageInput" name="content" placeholder="Type a message..." rows="1"></textarea>
+                <button type="submit" class="chat-send-btn" id="sendBtn" disabled><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </form>
+        <div id="filePreview" class="hidden" style="padding:8px 12px;background:var(--bg-tertiary);border-radius:var(--radius-md);margin-top:8px;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-file"></i>
+            <span id="fileName"></span>
+            <button type="button" id="removeFile" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+</main>
+
+<!-- Chat Info Panel -->
+<div id="chatInfoPanel" class="chat-info-panel hidden">
+    <div class="chat-info-header">
+        <button class="btn btn-icon btn-ghost" id="closeChatInfo"><i class="fas fa-times"></i></button>
+        <h2>Chat Info</h2>
+    </div>
+    
+    <div class="chat-info-content">
+        <!-- User/Group Avatar -->
+        <div class="chat-info-avatar">
+            {% if conversation.conversation_type == 'group' %}
+            <div class="avatar avatar-xl avatar-placeholder"><i class="fas fa-users"></i></div>
+            {% else %}
+            <div class="avatar avatar-xl avatar-placeholder">{{ other_user.username|make_list|first|upper|default:'?' }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- Name & Status -->
+        <div class="chat-info-name">{% if other_user %}{{ other_user.get_display_name }}{% else %}{{ conversation.name|default:"Chat" }}{% endif %}</div>
+        
+        {% if conversation.conversation_type == 'direct' and other_user %}
+        <div class="chat-info-username">@{{ other_user.username }}</div>
+        {% if other_user.bio %}
+        <div class="chat-info-bio">{{ other_user.bio }}</div>
+        {% endif %}
+        
+        <div class="chat-info-section">
+            <h3>Info</h3>
+            <div class="chat-info-item">
+                <i class="fas fa-envelope"></i>
+                <span>{{ other_user.email }}</span>
+            </div>
+            <div class="chat-info-item">
+                <i class="fas fa-calendar"></i>
+                <span>Joined {{ other_user.date_joined|date:"M Y" }}</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if conversation.conversation_type == 'group' %}
+        {% if conversation.description %}
+        <div class="chat-info-bio">{{ conversation.description }}</div>
+        {% endif %}
+        
+        <div class="chat-info-section">
+            <h3>{{ conversation.participants.count }} Members</h3>
+            <div class="chat-info-members">
+                {% for participant in conversation.conversation_participants.all %}
+                <div class="chat-info-member">
+                    <div class="avatar avatar-sm avatar-placeholder">{{ participant.user.username|make_list|first|upper }}</div>
+                    <div class="chat-info-member-info">
+                        <div class="chat-info-member-name">
+                            {{ participant.user.get_display_name }}
+                            {% if participant.role == 'owner' %}<span class="badge">Owner</span>{% endif %}
+                            {% if participant.role == 'admin' %}<span class="badge">Admin</span>{% endif %}
+                        </div>
+                        <div class="chat-info-member-joined">Joined {{ participant.joined_at|date:"M d, Y" }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Shared Media Placeholder -->
+        <div class="chat-info-section">
+            <h3>Shared Media</h3>
+            <div class="chat-info-media" id="sharedMedia">
+                <p class="text-muted text-small">No shared media yet</p>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="chat-info-actions">
+            <button class="btn btn-secondary btn-block" id="muteChatBtn">
+                <i class="fas fa-bell-slash"></i> {% if participant.is_muted %}Unmute{% else %}Mute{% endif %} Chat
+            </button>
+            <button class="btn btn-danger btn-block" id="deleteChatBtn">
+                <i class="fas fa-trash"></i> Delete Chat
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Chat Menu Dropdown -->
+<div id="chatMenu" class="dropdown-menu hidden">
+    <a href="#" id="muteBtn"><i class="fas fa-bell-slash"></i> {% if participant.is_muted %}Unmute{% else %}Mute{% endif %}</a>
+    <a href="#" id="archiveBtn"><i class="fas fa-archive"></i> Archive</a>
+    <a href="{% url 'chat:create_backup' conversation_id=conversation.id %}" id="backupBtn"><i class="fas fa-download"></i> Backup Chat</a>
+</div>
+
+<style>
+.dropdown-menu{position:absolute;top:60px;right:24px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px;min-width:180px;box-shadow:var(--shadow-lg);z-index:100}
+.dropdown-menu.hidden{display:none}
+.dropdown-menu a{display:flex;align-items:center;gap:10px;padding:10px 12px;color:var(--text-primary);text-decoration:none;border-radius:var(--radius-sm);font-size:14px}
+.dropdown-menu a:hover{background:var(--bg-tertiary)}
+.dropdown-menu a i{width:16px;color:var(--text-muted)}
+
+/* Chat Info Panel */
+.chat-info-panel{position:fixed;top:0;right:0;bottom:0;width:360px;background:var(--bg-secondary);border-left:1px solid var(--border-color);z-index:200;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s ease}
+.chat-info-panel.open{transform:translateX(0)}
+.chat-info-panel.hidden{display:none}
+.chat-info-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border-color)}
+.chat-info-header h2{font-size:16px;font-weight:600;flex:1}
+.chat-info-content{flex:1;overflow-y:auto;padding:24px}
+.chat-info-avatar{text-align:center;margin-bottom:16px}
+.chat-info-avatar .avatar{width:100px;height:100px;font-size:40px;margin:0 auto}
+.chat-info-name{text-align:center;font-size:20px;font-weight:600;margin-bottom:4px}
+.chat-info-username{text-align:center;font-size:14px;color:var(--text-muted);margin-bottom:8px}
+.chat-info-bio{text-align:center;font-size:14px;color:var(--text-secondary);margin-bottom:20px;padding:0 20px}
+.chat-info-section{margin-bottom:24px}
+.chat-info-section h3{font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px}
+.chat-info-item{display:flex;align-items:center;gap:12px;padding:8px 0;font-size:14px}
+.chat-info-item i{width:20px;color:var(--text-muted)}
+.chat-info-members{display:flex;flex-direction:column;gap:8px}
+.chat-info-member{display:flex;align-items:center;gap:12px;padding:8px;border-radius:var(--radius-md)}
+.chat-info-member:hover{background:var(--bg-tertiary)}
+.chat-info-member-info{flex:1}
+.chat-info-member-name{font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px}
+.chat-info-member-name .badge{font-size:10px;padding:2px 6px;background:var(--accent-glow);color:var(--accent-primary);border-radius:var(--radius-sm)}
+.chat-info-member-joined{font-size:12px;color:var(--text-muted)}
+.chat-info-media{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.chat-info-media img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--radius-sm);cursor:pointer}
+.chat-info-actions{padding-top:16px;border-top:1px solid var(--border-color);display:flex;flex-direction:column;gap:8px}
+</style>
+
+<script>
+const conversationId = '{{ conversation.id }}';
+const currentUserId = '{{ request.user.id }}';
+const messagesContainer = document.getElementById('messagesContainer');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+const messageForm = document.getElementById('messageForm');
+const fileInput = document.getElementById('fileInput');
+const filePreview = document.getElementById('filePreview');
+const fileName = document.getElementById('fileName');
+const typingIndicator = document.getElementById('typingIndicator');
+const chatInfoPanel = document.getElementById('chatInfoPanel');
+
+// ==================== MESSAGE CACHING ====================
+const messageCache = {
+    get(convId) {
+        const cached = sessionStorage.getItem(`chat_${convId}`);
+        if (cached) {
+            try { return JSON.parse(cached); } catch (e) { return null; }
+        }
+        return null;
+    },
+    
+    set(convId, messages) {
+        try {
+            const toCache = messages.slice(-100);
+            sessionStorage.setItem(`chat_${convId}`, JSON.stringify(toCache));
+        } catch (e) {
+            this.clearOld();
+        }
+    },
+    
+    add(convId, message) {
+        const existing = this.get(convId) || [];
+        if (!existing.find(m => m.id === message.id)) {
+            existing.push(message);
+            this.set(convId, existing);
+        }
+    },
+    
+    clearOld() {
+        const keys = Object.keys(sessionStorage).filter(k => k.startsWith('chat_'));
+        if (keys.length > 10) {
+            keys.slice(0, keys.length - 10).forEach(k => sessionStorage.removeItem(k));
+        }
+    }
+};
+
+// ==================== TRACK DISPLAYED MESSAGES ====================
+const displayedMessageIds = new Set();
+document.querySelectorAll('.message[data-id]').forEach(el => {
+    displayedMessageIds.add(el.dataset.id);
+});
+
+// Scroll to bottom on load
+setTimeout(() => {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}, 100);
+
+// ==================== INPUT HANDLING ====================
+messageInput.addEventListener('input', () => {
+    sendBtn.disabled = !messageInput.value.trim() && !fileInput.files.length;
+    autoResize();
+});
+
+function autoResize() {
+    messageInput.style.height = 'auto';
+    messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+}
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) {
+        fileName.textContent = fileInput.files[0].name;
+        filePreview.classList.remove('hidden');
+        sendBtn.disabled = false;
+    }
+});
+
+document.getElementById('removeFile').addEventListener('click', () => {
+    fileInput.value = '';
+    filePreview.classList.add('hidden');
+    sendBtn.disabled = !messageInput.value.trim();
+});
+
+// ==================== SEND MESSAGE ====================
+async function sendMessage() {
+    const content = messageInput.value.trim();
+    const file = fileInput.files[0];
+    
+    if (!content && !file) return;
+    
+    sendBtn.disabled = true;
+    const originalContent = content;
+    
+    messageInput.value = '';
+    messageInput.style.height = 'auto';
+    
+    const formData = new FormData();
+    formData.append('content', originalContent);
+    if (file) {
+        formData.append('file', file);
+        fileInput.value = '';
+        filePreview.classList.add('hidden');
+    }
+    
+    try {
+        const response = await fetch(`/chat/${conversationId}/send/`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.message) {
+            appendMessage(data.message);
+            messageCache.add(conversationId, data.message);
+        } else {
+            messageInput.value = originalContent;
+            alert('Failed to send message: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        messageInput.value = originalContent;
+        alert('Error sending message. Please check your connection.');
+    }
+    
+    sendBtn.disabled = false;
+}
+
+messageForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    sendMessage();
+});
+
+messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+// ==================== APPEND MESSAGE ====================
+function appendMessage(msg) {
+    if (!msg || !msg.id) return;
+    if (displayedMessageIds.has(msg.id)) return;
+    displayedMessageIds.add(msg.id);
+    
+    const isSent = msg.sender && msg.sender.id === currentUserId;
+    const div = document.createElement('div');
+    div.className = `message ${isSent ? 'sent' : 'received'}`;
+    div.dataset.id = msg.id;
+    
+    let senderInitial = '?';
+    if (msg.sender && msg.sender.name) {
+        senderInitial = msg.sender.name[0].toUpperCase();
+    } else if (msg.sender && msg.sender.username) {
+        senderInitial = msg.sender.username[0].toUpperCase();
+    }
+    
+    let html = '';
+    if (!isSent) {
+        html += `<div class="message-avatar"><div class="avatar avatar-sm avatar-placeholder">${senderInitial}</div></div>`;
+    }
+    
+    html += `<div class="message-content"><div class="message-bubble">`;
+    
+    if (msg.file && msg.file.url) {
+        html += `<a href="${escapeHtml(msg.file.url)}" class="message-file" download>
+            <div class="message-file-icon"><i class="fas fa-file"></i></div>
+            <div class="message-file-info"><div class="message-file-name">${escapeHtml(msg.file.name || 'File')}</div></div>
+            <i class="fas fa-download"></i>
+        </a>`;
+    }
+    
+    if (msg.content) {
+        html += escapeHtml(msg.content);
+    }
+    
+    html += `</div><div class="message-meta"><span>${formatTime(msg.created_at)}</span>`;
+    if (isSent) {
+        html += `<i class="fas fa-check-double" style="color:var(--accent-primary);margin-left:4px;"></i>`;
+    }
+    html += `</div></div>`;
+    
+    div.innerHTML = html;
+    messagesContainer.appendChild(div);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatTime(dateString) {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    } catch (e) {
+        return '';
+    }
+}
+
+// ==================== POLLING ====================
+async function pollForMessages() {
+    try {
+        const response = await fetch(`/chat/${conversationId}/load-more/?limit=50`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => {
+                    if (!displayedMessageIds.has(msg.id)) {
+                        appendMessage(msg);
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        // Silent fail for polling
+    }
+}
+
+const pollInterval = setInterval(pollForMessages, 3000);
+
+// ==================== WEBSOCKET (Optional) ====================
+let ws = null;
+
+function connectWebSocket() {
+    try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat/${conversationId}/`);
+        
+        ws.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.type === 'message' && data.message && data.message.sender && data.message.sender.id !== currentUserId) {
+                    appendMessage(data.message);
+                } else if (data.type === 'typing' && data.user_id !== currentUserId) {
+                    if (data.is_typing) {
+                        document.getElementById('typingUser').textContent = data.username || 'Someone';
+                        typingIndicator.classList.remove('hidden');
+                    } else {
+                        typingIndicator.classList.add('hidden');
+                    }
+                }
+            } catch (err) {}
+        };
+        
+        ws.onerror = () => {};
+        ws.onclose = () => { ws = null; };
+    } catch (error) {}
+}
+
+setTimeout(connectWebSocket, 500);
+
+// ==================== CHAT INFO PANEL ====================
+function openChatInfo() {
+    chatInfoPanel.classList.remove('hidden');
+    setTimeout(() => chatInfoPanel.classList.add('open'), 10);
+}
+
+function closeChatInfo() {
+    chatInfoPanel.classList.remove('open');
+    setTimeout(() => chatInfoPanel.classList.add('hidden'), 300);
+}
+
+document.getElementById('chatInfoBtn').addEventListener('click', openChatInfo);
+document.getElementById('openChatInfo').addEventListener('click', openChatInfo);
+document.getElementById('closeChatInfo').addEventListener('click', closeChatInfo);
+
+document.getElementById('muteChatBtn').addEventListener('click', async () => {
+    await fetch(`/chat/${conversationId}/mute/`, { headers: { 'X-CSRFToken': '{{ csrf_token }}' } });
+    location.reload();
+});
+
+document.getElementById('deleteChatBtn').addEventListener('click', async () => {
+    if (confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+        alert('Delete functionality coming soon');
+    }
+});
+
+// ==================== CHAT MENU ====================
+document.getElementById('chatMenuBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('chatMenu').classList.toggle('hidden');
+});
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#chatMenuBtn') && !e.target.closest('#chatMenu')) {
+        document.getElementById('chatMenu').classList.add('hidden');
+    }
+});
+
+document.getElementById('muteBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await fetch(`/chat/${conversationId}/mute/`, { headers: { 'X-CSRFToken': '{{ csrf_token }}' } });
+    location.reload();
+});
+
+document.getElementById('archiveBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await fetch(`/chat/${conversationId}/archive/`, { headers: { 'X-CSRFToken': '{{ csrf_token }}' } });
+    window.location.href = '{% url "chat:chat_list" %}';
+});
+
+// ==================== SIDEBAR SEARCH ====================
+document.getElementById('sidebarSearch').addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    document.querySelectorAll('.chat-item').forEach(item => {
+        const name = item.querySelector('.chat-item-name span').textContent.toLowerCase();
+        item.style.display = name.includes(query) ? 'flex' : 'none';
+    });
+});
+
+// ==================== CLEANUP ====================
+window.addEventListener('beforeunload', () => {
+    clearInterval(pollInterval);
+    if (ws) ws.close();
+});
+</script>
+{% endblock %}

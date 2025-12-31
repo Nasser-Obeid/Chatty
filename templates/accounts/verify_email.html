@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Email - Chatty{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-logo-icon">
+                <i class="fas fa-envelope-open-text"></i>
+            </div>
+            <span class="auth-logo-text">Chatty</span>
+        </div>
+        
+        <h1 class="auth-title">Verify your email</h1>
+        <p class="auth-subtitle">We sent a 6-digit code to <strong>{{ email }}</strong></p>
+        
+        {% if form.errors %}
+        <div class="alert alert-error">
+            {% for field in form %}
+                {% for error in field.errors %}
+                    {{ error }}<br>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="post" id="verifyForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">Verification Code</label>
+                <div class="verification-input-wrapper">
+                    {{ form.code }}
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-check-circle"></i>
+                Verify Email
+            </button>
+        </form>
+        
+        <div class="text-center mt-3">
+            <p class="text-muted text-small mb-2">Didn't receive the code?</p>
+            <button type="button" id="resendBtn" class="btn btn-ghost btn-sm">
+                <i class="fas fa-redo"></i>
+                Resend Code
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .verification-input-wrapper input {
+        text-align: center;
+        font-size: 24px;
+        letter-spacing: 8px;
+        font-weight: 600;
+    }
+</style>
+
+{% block extra_js %}
+<script>
+    document.getElementById('resendBtn').addEventListener('click', async function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner"></div> Sending...';
+        
+        try {
+            const response = await fetch('{% url "accounts:resend_verification" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                btn.innerHTML = '<i class="fas fa-check"></i> Code Sent!';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-redo"></i> Resend Code';
+                    btn.disabled = false;
+                }, 3000);
+            } else {
+                btn.innerHTML = '<i class="fas fa-times"></i> Failed';
+                btn.disabled = false;
+            }
+        } catch (error) {
+            btn.innerHTML = '<i class="fas fa-times"></i> Error';
+            btn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

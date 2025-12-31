@@ -1,0 +1,129 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Settings - Chatty{% endblock %}
+
+{% block app_content %}
+<!-- Sidebar Navigation -->
+<aside class="sidebar">
+    <div class="sidebar-logo"><i class="fas fa-comments"></i></div>
+    <nav class="sidebar-nav">
+        <a href="{% url 'chat:chat_list' %}" class="sidebar-item" title="Messages"><i class="fas fa-comment-dots"></i></a>
+    </nav>
+    <div class="sidebar-bottom">
+        <a href="{% url 'core:settings' %}" class="sidebar-item active" title="Settings"><i class="fas fa-cog"></i></a>
+        <div class="sidebar-user">
+            <div class="avatar avatar-placeholder" style="width:100%;height:100%;">{{ request.user.username|make_list|first|upper }}</div>
+        </div>
+    </div>
+</aside>
+
+<!-- Settings Panel -->
+<div class="settings-container">
+    <div class="settings-header">
+        <h1>Settings</h1>
+    </div>
+    
+    <div class="settings-content">
+        <!-- Profile Section -->
+        <div class="settings-section">
+            <div class="settings-section-header">
+                <div class="settings-user-info">
+                    <div class="avatar avatar-lg avatar-placeholder">
+                        {% if request.user.profile_pic %}
+                        <img src="{{ request.user.profile_pic.url }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                        {% else %}
+                        {{ request.user.username|make_list|first|upper }}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2>{{ request.user.name|default:request.user.username }}</h2>
+                        <p class="text-muted">@{{ request.user.username }}</p>
+                        {% if request.user.bio %}
+                        <p class="text-small mt-1">{{ request.user.bio }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <a href="{% url 'core:profile' %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </a>
+            </div>
+        </div>
+        
+        <!-- Settings Menu -->
+        <div class="settings-menu">
+            <a href="{% url 'core:appearance' %}" class="settings-menu-item">
+                <div class="settings-menu-icon"><i class="fas fa-palette"></i></div>
+                <div class="settings-menu-info">
+                    <div class="settings-menu-title">Appearance</div>
+                    <div class="settings-menu-desc">Theme, chat backgrounds</div>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            
+            <a href="{% url 'core:profile' %}" class="settings-menu-item">
+                <div class="settings-menu-icon"><i class="fas fa-user"></i></div>
+                <div class="settings-menu-info">
+                    <div class="settings-menu-title">Profile</div>
+                    <div class="settings-menu-desc">Name, bio, profile picture</div>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            
+            <a href="{% url 'core:security' %}" class="settings-menu-item">
+                <div class="settings-menu-icon"><i class="fas fa-lock"></i></div>
+                <div class="settings-menu-info">
+                    <div class="settings-menu-title">Security</div>
+                    <div class="settings-menu-desc">Password, two-factor auth</div>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            
+            <a href="{% url 'core:privacy' %}" class="settings-menu-item">
+                <div class="settings-menu-icon"><i class="fas fa-shield-alt"></i></div>
+                <div class="settings-menu-info">
+                    <div class="settings-menu-title">Privacy & Data</div>
+                    <div class="settings-menu-desc">Backups, data management</div>
+                </div>
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            
+            <div class="settings-divider"></div>
+            
+            <a href="{% url 'accounts:logout' %}" class="settings-menu-item">
+                <div class="settings-menu-icon" style="color:var(--error);"><i class="fas fa-sign-out-alt"></i></div>
+                <div class="settings-menu-info">
+                    <div class="settings-menu-title" style="color:var(--error);">Log Out</div>
+                    <div class="settings-menu-desc">Sign out of your account</div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="settings-footer">
+            <p class="text-muted text-small text-center">
+                Chatty v1.0 • Made with <i class="fas fa-heart" style="color:var(--error);"></i>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+.settings-container{flex:1;background:var(--bg-primary);overflow-y:auto}
+.settings-header{padding:24px 32px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color)}
+.settings-header h1{font-size:24px;font-weight:700}
+.settings-content{max-width:600px;margin:0 auto;padding:24px}
+.settings-section{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px}
+.settings-section-header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.settings-user-info{display:flex;align-items:center;gap:16px}
+.settings-user-info h2{font-size:18px;font-weight:600}
+.settings-menu{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden}
+.settings-menu-item{display:flex;align-items:center;gap:16px;padding:16px 20px;color:var(--text-primary);text-decoration:none;transition:background 0.2s}
+.settings-menu-item:hover{background:var(--bg-tertiary)}
+.settings-menu-icon{width:40px;height:40px;background:var(--bg-tertiary);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:var(--accent-primary);font-size:16px}
+.settings-menu-info{flex:1}
+.settings-menu-title{font-weight:500;margin-bottom:2px}
+.settings-menu-desc{font-size:13px;color:var(--text-muted)}
+.settings-menu-item > i{color:var(--text-muted)}
+.settings-divider{height:1px;background:var(--border-color);margin:8px 0}
+.settings-footer{padding:32px;text-align:center}
+</style>
+{% endblock %}

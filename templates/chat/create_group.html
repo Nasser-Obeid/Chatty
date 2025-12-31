@@ -1,0 +1,86 @@
+{% extends 'base_app.html' %}
+
+{% block title %}Create Group - Chatty{% endblock %}
+
+{% block app_content %}
+<aside class="sidebar">
+    <div class="sidebar-logo"><i class="fas fa-comments"></i></div>
+    <nav class="sidebar-nav">
+        <a href="{% url 'chat:chat_list' %}" class="sidebar-item"><i class="fas fa-comment-dots"></i></a>
+    </nav>
+</aside>
+
+<div class="settings-container">
+    <div class="settings-header">
+        <a href="{% url 'chat:chat_list' %}" class="btn btn-ghost btn-sm"><i class="fas fa-arrow-left"></i></a>
+        <h1>Create New Group</h1>
+    </div>
+    
+    <div class="settings-content">
+        <form method="post" enctype="multipart/form-data" id="createGroupForm">
+            {% csrf_token %}
+            
+            <div class="settings-section">
+                <div class="form-group">
+                    <label class="form-label">Group Name *</label>
+                    <input type="text" class="form-input" name="name" required placeholder="Enter group name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" name="description" rows="3" placeholder="What's this group about?"></textarea>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h3 style="font-size:16px;font-weight:600;margin-bottom:16px;">Add Members</h3>
+                <div class="search-box mb-2">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search users..." id="memberSearch">
+                </div>
+                <div class="selected-members" id="selectedMembers"></div>
+                <div class="user-search-results" id="searchResults"></div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Create Group</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.settings-header{display:flex;align-items:center;gap:16px;padding:24px 32px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color)}
+.settings-section{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px}
+.selected-members{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.selected-member{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--accent-glow);color:var(--accent-primary);border-radius:var(--radius-lg);font-size:13px}
+.selected-member button{background:none;border:none;color:inherit;cursor:pointer}
+.user-search-results{max-height:200px;overflow-y:auto}
+.user-result{display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--radius-md);cursor:pointer}
+.user-result:hover{background:var(--bg-tertiary)}
+</style>
+
+<script>
+const selectedMembers = new Map();
+let searchTimeout;
+
+document.getElementById('memberSearch').addEventListener('input', e => {
+    clearTimeout(searchTimeout);
+    const query = e.target.value.trim();
+    if (query.length < 2) { document.getElementById('searchResults').innerHTML = ''; return; }
+    searchTimeout = setTimeout(async () => {
+        const response = await fetch('/accounts/search/?q=' + encodeURIComponent(query));
+        const data = await response.json();
+        document.getElementById('searchResults').innerHTML = data.users.filter(u => !selectedMembers.has(u.id)).map(user =>
+            '<div class="user-result" onclick="addMember(\'' + user.id + '\', \'' + user.name + '\')"><div class="avatar avatar-placeholder">' + user.name[0].toUpperCase() + '</div><div><div style="font-weight:500">' + user.name + '</div><div style="font-size:12px;color:var(--text-muted)">@' + user.username + '</div></div></div>'
+        ).join('');
+    }, 300);
+});
+
+function addMember(id, name) { selectedMembers.set(id, name); updateSelectedMembers(); document.getElementById('searchResults').innerHTML = ''; document.getElementById('memberSearch').value = ''; }
+function removeMember(id) { selectedMembers.delete(id); updateSelectedMembers(); }
+function updateSelectedMembers() {
+    document.getElementById('selectedMembers').innerHTML = Array.from(selectedMembers.entries()).map(([id, name]) =>
+        '<span class="selected-member">' + name + '<button type="button" onclick="removeMember(\'' + id + '\')">&times;</button><input type="hidden" name="participants" value="' + id + '"></span>'
+    ).join('');
+}
+</script>
+{% endblock %}
