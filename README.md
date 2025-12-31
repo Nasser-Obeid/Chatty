@@ -129,7 +129,7 @@ chatty/
 
 ## 📸 Screenshots
 
-![alt text](/pics/Screenshot 2025-12-31 at 14-07-45 Settings - Chatty.png?raw=true "screenshot1")
+![alt text](https://github.com/Nasser-Obeid/Chatty/blob/main/pics/Screenshot 2025-12-31 at 14-07-45 Settings - Chatty.png?raw=true "screenshot1")
 ![alt text](/pics/Screenshot 2025-12-31 at 14-08-02 Sign In - Chatty.png?raw=true "screenshot2")
 ![alt text](/pics/Screenshot 2025-12-31 at 14-15-58 test - Chatty.png?raw=true "screenshot3")
 
