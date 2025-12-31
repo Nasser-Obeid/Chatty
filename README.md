@@ -130,8 +130,8 @@ chatty/
 ## 📸 Screenshots
 
 ![alt text](https://github.com/Nasser-Obeid/Chatty/blob/main/pics/Screenshot%202025-12-31%20at%2014-07-45%20Settings%20-%20Chatty.png?raw=true "screenshot1")
-![alt text](/pics/Screenshot 2025-12-31 at 14-08-02 Sign In - Chatty.png?raw=true "screenshot2")
-![alt text](/pics/Screenshot 2025-12-31 at 14-15-58 test - Chatty.png?raw=true "screenshot3")
+![alt text](https://github.com/Nasser-Obeid/Chatty/blob/main/pics/Screenshot%202025-12-31%20at%2014-08-02%20Sign%20In%20-%20Chatty.png?raw=true "screenshot2")
+![alt text](https://github.com/Nasser-Obeid/Chatty/blob/main/pics/Screenshot%202025-12-31%20at%2014-15-58%20test%20-%20Chatty.png?raw=true "screenshot3")
 
 ## 🤝 Contributing
 
