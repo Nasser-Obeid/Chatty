@@ -129,9 +129,9 @@ chatty/
 
 ## 📸 Screenshots
 
-![screenshot1](/pics/Screenshot 2025-12-31 at 14-07-45 Settings - Chatty.png?raw=true "screenshot1")
-![screenshot2](/pics/Screenshot 2025-12-31 at 14-08-02 Sign In - Chatty.png?raw=true "screenshot2")
-![screenshot3](/pics/Screenshot 2025-12-31 at 14-15-58 test - Chatty.png?raw=true "screenshot3")
+![alt text](/pics/Screenshot 2025-12-31 at 14-07-45 Settings - Chatty.png?raw=true "screenshot1")
+![alt text](/pics/Screenshot 2025-12-31 at 14-08-02 Sign In - Chatty.png?raw=true "screenshot2")
+![alt text](/pics/Screenshot 2025-12-31 at 14-15-58 test - Chatty.png?raw=true "screenshot3")
 
 ## 🤝 Contributing
 
